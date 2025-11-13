@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Activity, LayoutDashboard, FileText, MapPin, Settings, LogOut } from "lucide-react";
 import { toast } from "sonner";
+import NotificationBell from "@/components/NotificationBell";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -70,8 +71,11 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         </nav>
 
         <div className="p-4 border-t border-border space-y-2">
-          <div className="px-3 py-2 text-sm text-muted-foreground">
-            {user.email}
+          <div className="flex items-center justify-between px-3 py-2">
+            <span className="text-sm text-muted-foreground truncate">
+              {user.email}
+            </span>
+            <NotificationBell />
           </div>
           <Button variant="ghost" className="w-full justify-start" onClick={handleSignOut}>
             <LogOut className="h-4 w-4 mr-2" />
