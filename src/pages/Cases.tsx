@@ -1,42 +1,16 @@
-import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Download } from "lucide-react";
+import { Plus, Download, Activity } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
+import { useRealtimeCases } from "@/hooks/useRealtimeCases";
 
 const Cases = () => {
-  const [cases, setCases] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchCases();
-  }, []);
-
-  const fetchCases = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("cases")
-        .select(`
-          *,
-          disease:diseases(name),
-          household:households(household_code)
-        `)
-        .order("report_date", { ascending: false })
-        .limit(100);
-
-      if (error) throw error;
-      setCases(data || []);
-    } catch (error) {
-      console.error("Error fetching cases:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { cases, loading } = useRealtimeCases();
 
   const getSeverityColor = (severity: string | null) => {
     switch (severity) {
@@ -51,7 +25,7 @@ const Cases = () => {
     const headers = ["ID", "Disease", "Report Date", "Severity", "Confirmed", "Outcome"];
     const rows = cases.map(c => [
       c.id,
-      c.disease?.name || "N/A",
+      c.diseases?.name || "N/A",
       format(new Date(c.report_date), "yyyy-MM-dd"),
       c.severity || "N/A",
       c.confirmed ? "Yes" : "No",
@@ -77,7 +51,7 @@ const Cases = () => {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-4xl font-bold mb-2">Case Management</h1>
-            <p className="text-muted-foreground">View and manage disease case reports</p>
+            <p className="text-muted-foreground">View and manage disease case reports in real-time</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={exportToCSV}>
@@ -96,7 +70,7 @@ const Cases = () => {
         <Card>
           <CardHeader>
             <CardTitle>Recent Cases</CardTitle>
-            <CardDescription>Latest 100 case reports</CardDescription>
+            <CardDescription>Real-time case reports with live updates</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -114,7 +88,10 @@ const Cases = () => {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center">Loading...</TableCell>
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <Activity className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
+                        <p>Loading cases...</p>
+                      </TableCell>
                     </TableRow>
                   ) : cases.length === 0 ? (
                     <TableRow>
@@ -124,8 +101,8 @@ const Cases = () => {
                     cases.map((c) => (
                       <TableRow key={c.id}>
                         <TableCell>{format(new Date(c.report_date), "MMM dd, yyyy")}</TableCell>
-                        <TableCell className="font-medium">{c.disease?.name || "N/A"}</TableCell>
-                        <TableCell className="text-muted-foreground">{c.household?.household_code || "N/A"}</TableCell>
+                        <TableCell className="font-medium">{c.diseases?.name || "N/A"}</TableCell>
+                        <TableCell className="text-muted-foreground">{c.households?.household_code || "N/A"}</TableCell>
                         <TableCell>
                           {c.severity ? (
                             <Badge variant={getSeverityColor(c.severity)}>{c.severity}</Badge>
