@@ -1,10 +1,10 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Activity, LayoutDashboard, FileText, MapPin, Settings, LogOut } from "lucide-react";
 import { toast } from "sonner";
-import type { User, Session } from "@supabase/supabase-js";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -13,32 +13,7 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-
-  useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (!session) {
-        navigate("/auth");
-      }
-    });
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (!session) {
-        navigate("/auth");
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+  const { user, userRole } = useAuth();
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
@@ -53,11 +28,15 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const isActive = (path: string) => location.pathname === path;
 
   const navItems = [
-    { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { path: "/cases", label: "Cases", icon: FileText },
-    { path: "/map", label: "Map View", icon: MapPin },
-    { path: "/admin", label: "Admin", icon: Settings },
+    { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "officer", "viewer"] },
+    { path: "/cases", label: "Cases", icon: FileText, roles: ["admin", "officer", "viewer"] },
+    { path: "/map", label: "Map View", icon: MapPin, roles: ["admin", "officer", "viewer"] },
+    { path: "/admin", label: "Admin", icon: Settings, roles: ["admin"] },
   ];
+
+  const filteredNavItems = navItems.filter(
+    (item) => !item.roles || (userRole && item.roles.includes(userRole))
+  );
 
   if (!user) {
     return null; // Or loading spinner
@@ -77,7 +56,7 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
         </div>
 
         <nav className="flex-1 p-4 space-y-2">
-          {navItems.map((item) => (
+          {filteredNavItems.map((item) => (
             <Link key={item.path} to={item.path}>
               <Button
                 variant={isActive(item.path) ? "secondary" : "ghost"}
